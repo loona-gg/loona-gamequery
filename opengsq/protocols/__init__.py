@@ -22,3 +22,5 @@ from opengsq.protocols.teamspeak3 import TeamSpeak3
 from opengsq.protocols.unreal2 import Unreal2
 from opengsq.protocols.vcmp import Vcmp
 from opengsq.protocols.won import WON
+from opengsq.protocols.terraria import Terraria
+from opengsq.protocols.palworld import Palworld

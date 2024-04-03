@@ -11,3 +11,8 @@ class ProtocolBase(abc.ABC):
         self._host = host
         self._port = port
         self._timeout = timeout
+
+    @abc.abstractmethod
+    async def query(self) -> dict:
+        # TODO: Implement this method
+        pass

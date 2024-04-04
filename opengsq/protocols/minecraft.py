@@ -10,6 +10,7 @@ from opengsq.binary_reader import BinaryReader
 from opengsq.exceptions import InvalidPacketException
 from opengsq.protocol_base import ProtocolBase
 from opengsq.protocol_socket import TcpClient
+from opengsq.responses.models import ServerStatus, ServerPlayer, PlayersList
 
 
 class Minecraft(ProtocolBase):
@@ -18,6 +19,29 @@ class Minecraft(ProtocolBase):
     """
 
     full_name = "Minecraft Protocol"
+
+    async def query(self, version=47, strip_color=True) -> ServerStatus:
+        status = await self.get_status(version, strip_color)
+        print("STAT", status)
+        players = status.get("players", {}).copy()
+        if players:
+            max_players = players.get("max", 0)
+            online_players = players.get("online", 0)
+            plist = []
+            for player in players.get("sample", []):
+                plist.append(ServerPlayer(
+                    name=player.get("name", ""),
+                    id=player.get("id", "")
+                ))
+            players = PlayersList(
+                max=max_players,
+                online=online_players,
+                list=plist
+            )
+            status["players"] = players
+        return ServerStatus(
+            **status
+        )
 
     async def get_status(self, version=47, strip_color=True) -> dict[str, Any]:
         """
@@ -31,12 +55,12 @@ class Minecraft(ProtocolBase):
         address = self._host.encode("utf8")
         protocol = self._pack_varint(version)
         request = (
-            b"\x00"
-            + protocol
-            + self._pack_varint(len(address))
-            + address
-            + struct.pack("H", self._port)
-            + b"\x01"
+                b"\x00"
+                + protocol
+                + self._pack_varint(len(address))
+                + address
+                + struct.pack("H", self._port)
+                + b"\x01"
         )
         request = self._pack_varint(len(request)) + request + b"\x01\x00"
 
@@ -61,6 +85,7 @@ class Minecraft(ProtocolBase):
 
         # The packet may response with two json objects, so we need to get the json length exactly
         data = json.loads(br.read_bytes(count).decode("utf-8"))
+        print(data)
 
         if strip_color:
             if "sample" in data["players"]:
@@ -73,14 +98,14 @@ class Minecraft(ProtocolBase):
                 data["description"] = Minecraft.strip_colors(data["description"])
             else:
                 if "text" in data["description"] and isinstance(
-                    data["description"]["text"], str
+                        data["description"]["text"], str
                 ):
                     data["description"]["text"] = Minecraft.strip_colors(
                         data["description"]["text"]
                     )
 
                 if "extra" in data["description"] and isinstance(
-                    data["description"]["extra"], list
+                        data["description"]["extra"], list
                 ):
                     for i, extra in enumerate(data["description"]["extra"]):
                         if isinstance(extra, str):
@@ -173,6 +198,7 @@ class Minecraft(ProtocolBase):
 if __name__ == "__main__":
     import asyncio
 
+
     async def main_async():
         minecraft = Minecraft(host="mc.goldcraft.ir", port=25565, timeout=5.0)
         # minecraft = Minecraft(host="xcl.no", port=25565, timeout=5.0)
@@ -180,5 +206,6 @@ if __name__ == "__main__":
         print(status)
         status_pre17 = await minecraft.get_status_pre17()
         print(status_pre17)
+
 
     asyncio.run(main_async())

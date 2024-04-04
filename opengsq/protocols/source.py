@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import bz2
 import zlib
 
+from opengsq.responses.models import ServerStatus, PlayersList, ServerPlayer
 from opengsq.responses.source import (
     Environment,
     ExtraDataFlag,
@@ -43,6 +45,35 @@ class Source(ProtocolBase):
         S2A_RULES = 0x45
         A2A_ACK = 0x6A
 
+    async def _ret(self, value):
+        return value
+
+    async def query(self, players=True, rules=False) -> ServerStatus:
+        tasks = [self.get_info()]
+        if players:
+            tasks.append(self.get_players())
+        else:
+            tasks.append(self._ret([]))
+        if rules:
+            tasks.append(self.get_rules())
+        else:
+            tasks.append(self._ret({}))
+
+        info, players_list, rules_dict = await asyncio.gather(*tasks)
+        print("INFO", info)
+        print("PLAYERS", players_list)
+        players = []
+        for player in players_list:
+            players.append(ServerPlayer(
+                id=player.name,
+                name=player.name
+            ))
+        print("RULES", rules_dict)
+        pl = PlayersList(online=info.players, max=info.max_players, list=players)
+        return ServerStatus(
+            **{x: getattr(info, x) for x in info.__dataclass_fields__},
+            players_list=pl, rules=rules_dict)
+
     async def get_info(self) -> PartialInfo:
         """
         Asynchronously retrieves information about the server including, but not limited to: its name, the map currently being played, and the number of players.
@@ -55,8 +86,8 @@ class Source(ProtocolBase):
         header = br.read_byte()
 
         if (
-            header != self.__ResponseHeader.S2A_INFO_SRC
-            and header != self.__ResponseHeader.S2A_INFO_DETAILED
+                header != self.__ResponseHeader.S2A_INFO_SRC
+                and header != self.__ResponseHeader.S2A_INFO_DETAILED
         ):
             raise InvalidPacketException(
                 "Packet header mismatch. Received: {}. Expected: {} or {}.".format(
@@ -321,9 +352,9 @@ class Source(ProtocolBase):
                 )
 
         return (
-            combined_payload.startswith(b"\xFF\xFF\xFF\xFF")
-            and combined_payload[4:]
-            or combined_payload
+                combined_payload.startswith(b"\xFF\xFF\xFF\xFF")
+                and combined_payload[4:]
+                or combined_payload
         )
 
     def __is_gold_source_split(self, br: BinaryReader):
@@ -367,14 +398,15 @@ class Source(ProtocolBase):
         combined_payload = b"".join(payloads[number] for number in sorted(payloads))
 
         return (
-            combined_payload.startswith(b"\xFF\xFF\xFF\xFF")
-            and combined_payload[4:]
-            or combined_payload
+                combined_payload.startswith(b"\xFF\xFF\xFF\xFF")
+                and combined_payload[4:]
+                or combined_payload
         )
 
 
 if __name__ == "__main__":
     import asyncio
+
 
     async def main_async():
         # Compressed response
@@ -390,5 +422,6 @@ if __name__ == "__main__":
         await asyncio.sleep(1)
         rules = await source.get_rules()
         print(rules)
+
 
     asyncio.run(main_async())

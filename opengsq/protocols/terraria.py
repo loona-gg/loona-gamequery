@@ -1,13 +1,15 @@
+import json
 import time
 from typing import TYPE_CHECKING
 
 import aiohttp
 
 from opengsq.protocol_base import ProtocolBase
+from opengsq.responses.models import ServerStatus
 
 
 class Terraria(ProtocolBase):
-    name = "terraria"
+    full_name = "terraria"
 
     def __init__(self, host: str, port: int, token: str, timeout: float = 5.0):
         self._token = token
@@ -38,5 +40,16 @@ class Terraria(ProtocolBase):
             "ping": int((end - start) * 1000),
             "raw": data,
         }
+        print(json.dumps(result, indent=4))
+
+        result = ServerStatus(
+            name=result["name"],
+            description=result["world"],
+            players_list={
+                "online": result["playercount"],
+                "max": result["maxplayers"],
+                "list": [{"id": x, "name": x} for x in result["players"]],
+            },
+        )
 
         return result

@@ -60,15 +60,12 @@ class Source(ProtocolBase):
             tasks.append(self._ret({}))
 
         info, players_list, rules_dict = await asyncio.gather(*tasks)
-        print("INFO", info)
-        print("PLAYERS", players_list)
         players = []
         for player in players_list:
             players.append(ServerPlayer(
                 id=player.name,
                 name=player.name
             ))
-        print("RULES", rules_dict)
         pl = PlayersList(online=info.players, max=info.max_players, list=players)
         return ServerStatus(
             **{x: getattr(info, x) for x in info.__dataclass_fields__},
@@ -402,26 +399,3 @@ class Source(ProtocolBase):
                 and combined_payload[4:]
                 or combined_payload
         )
-
-
-if __name__ == "__main__":
-    import asyncio
-
-
-    async def main_async():
-        # Compressed response
-        # source = Source(host="146.19.87.161", port=27015, timeout=5.0)
-        source = Source(host="45.62.160.71", port=27015, timeout=5.0)
-        info = await source.get_info()
-        print(info)
-
-        await asyncio.sleep(1)
-        players = await source.get_players()
-        print(players)
-
-        await asyncio.sleep(1)
-        rules = await source.get_rules()
-        print(rules)
-
-
-    asyncio.run(main_async())

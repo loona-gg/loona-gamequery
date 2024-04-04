@@ -25,7 +25,6 @@ class Minecraft(ProtocolBase):
 
     async def query(self, version=47, strip_color=True) -> ServerStatus:
         status = await self.get_status(version, strip_color)
-        print("STAT", status)
         players = status.get("players", {}).copy()
         plist = []
         max_players = players.get("max", 0)
@@ -87,7 +86,6 @@ class Minecraft(ProtocolBase):
 
         # The packet may response with two json objects, so we need to get the json length exactly
         data = json.loads(br.read_bytes(count).decode("utf-8"))
-        print(data)
 
         if strip_color:
             if "sample" in data["players"]:

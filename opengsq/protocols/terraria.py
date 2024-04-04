@@ -43,12 +43,12 @@ class Terraria(ProtocolBase):
         print(json.dumps(result, indent=4))
 
         result = ServerStatus(
-            name=result["name"],
-            description=result["world"],
+            name=data.get("name", "Unknown"),
+            description=result.get("world", "Unknown"),
             players_list={
-                "online": result["playercount"],
-                "max": result["maxplayers"],
-                "list": [{"id": x, "name": x} for x in result["players"]],
+                "online": len(result["players"]),
+                "max": data.get("maxplayers", 0),
+                "list": [{"id": x['nickname'], "name": x['nickname']} for x in data["players"]],
             },
         )
 

@@ -23,15 +23,14 @@ class Palworld(ProtocolBase):
                 response.raise_for_status()
                 data: dict = await response.json()
 
-        player_list = PlayersList(
-            online=data.get("current_players", 0),
-            max=data.get("max_players", 0),
-            list=[]
-        )
         result = ServerStatus(
             name=data.get("name", ""),
             description=data.get("map_name", ""),
-            players_list=player_list,
+            players_list={
+                "online": data.get("current_players", 0),
+                "max": data.get("max_players", 0),
+                "list": [],
+            },
         )
 
         return result

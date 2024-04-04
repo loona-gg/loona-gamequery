@@ -5,6 +5,9 @@ import re
 import struct
 from typing import Any
 
+from deprecation import deprecated
+from opengsq import version
+
 from opengsq.responses.minecraft import StatusPre17
 from opengsq.binary_reader import BinaryReader
 from opengsq.exceptions import InvalidPacketException
@@ -24,23 +27,22 @@ class Minecraft(ProtocolBase):
         status = await self.get_status(version, strip_color)
         print("STAT", status)
         players = status.get("players", {}).copy()
+        plist = []
+        max_players = players.get("max", 0)
+        online_players = players.get("online", 0)
         if players:
-            max_players = players.get("max", 0)
-            online_players = players.get("online", 0)
-            plist = []
             for player in players.get("sample", []):
                 plist.append(ServerPlayer(
-                    name=player.get("name", ""),
-                    id=player.get("id", "")
+                    name=player.get("name", "Unknown"),
+                    id=player.get("id", "Unknown")
                 ))
-            players = PlayersList(
-                max=max_players,
-                online=online_players,
-                list=plist
-            )
-            status["players"] = players
         return ServerStatus(
-            **status
+            **status,
+            players_list={
+                "online": online_players,
+                "max": max_players,
+                "list": plist
+            }
         )
 
     async def get_status(self, version=47, strip_color=True) -> dict[str, Any]:
@@ -119,6 +121,7 @@ class Minecraft(ProtocolBase):
 
         return data
 
+    @deprecated(deprecated_in="3.1.2", current_version=version.__version__)
     async def get_status_pre17(self, strip_color=True) -> StatusPre17:
         """
         Asynchronously retrieves the status of a game server that uses a version older than Minecraft 1.7.
@@ -193,19 +196,3 @@ class Minecraft(ProtocolBase):
             total -= 1 << 32
 
         return total
-
-
-if __name__ == "__main__":
-    import asyncio
-
-
-    async def main_async():
-        minecraft = Minecraft(host="mc.goldcraft.ir", port=25565, timeout=5.0)
-        # minecraft = Minecraft(host="xcl.no", port=25565, timeout=5.0)
-        status = await minecraft.get_status(47, strip_color=True)
-        print(status)
-        status_pre17 = await minecraft.get_status_pre17()
-        print(status_pre17)
-
-
-    asyncio.run(main_async())
